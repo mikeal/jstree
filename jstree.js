@@ -1,4 +1,4 @@
-
+var sys = require('sys')
 
 // Basic structure
 // {root:node, size:587, }
@@ -6,11 +6,11 @@
 // node structure
 // Parent reference must be lazy loaded on deserialized trees and must be funciton to avoid
 // circular references during serialization.
-{left:{}, right:{}, values:[], key:'saf', size:59,
- parent: function (){return parent;}, 
- range: function (end) {return [array of nodes]},
- 
- }
+// {left:{}, right:{}, values:[], key:'saf', size:59,
+//  parent: function (){return parent;}, 
+//  range: function (end) {return [array of nodes]},
+//  
+//  }
 
 // tree methods
 // range(start, end) // returns array of nodes
@@ -24,6 +24,8 @@
 // node methods
 // parent() 
 // range(end) // return array of nodes
+
+var i= 0;
 
 var createNode = function (parent, node) {
   var node = node || {};
@@ -59,7 +61,7 @@ var createNode = function (parent, node) {
           throw "Node with identical key cannot be inserted."
         }
         if (node.right.key < n.key) {
-          node.left.insertNode(n);
+          node.right.insertNode(n);
         } else {
           n.insertNode(node.right);
           node.right = n;
@@ -68,34 +70,39 @@ var createNode = function (parent, node) {
         }
       }
     }
+    n.size = 1;
+    if (node.left) {n.size += node.left.size}
+    if (node.right) {n.size += node.right.size}
+    var p = n.parent();
+    while (p) {
+      p.size = 1;
+      if (p.left) {p.size += p.left.size}
+      if (p.right) {p.size += p.right.size}
+      p = p.parent();
+    }
   }
   node.reParent = function (p) {
     node.parent = function (){return p};
-    while (p) {
-      p.size = p.right + p.left + 1;
-      p = p.parent();
-    }
   }
   node.parent = function (){return parent;};
   node.range = function (end) {
     var results = [];
     var traverse = function (key, n) {
-      if (n.key <== key) {
+      if (n.key <= key) {
         results.push(n);
-      }
-      if (n.left < key) {
+      } else if (n.left < key) {
         traverse(key, n.left);
-      }
-      if (n.right < key) {
+      } else if (n.right < key) {
         traverse(key, n.right)
       }
     }
     traverse(end, node);
     return node;
   };
+  return node;
 }
 
-var createTree(tree) {
+var createTree = function (tree) {
   tree = tree || {};
   tree.insert = tree.insert || function (key, value) {
     if (!tree.root) {
@@ -104,11 +111,17 @@ var createTree(tree) {
     }
     var traverse = function (key, n) {
       if (n.key === key) {return n;};
-      if (n.left > key) {
-        return n;
+      if (n.left) {
+        if (n.left > key) {
+          return n;
+        } else {
+          return traverse(key, n.left)
+        }
       } else {
-        return traverse(key, n)
+        return n;
       }
+      
+      
     }
     var node = traverse(key, tree.root)
     if (node.key === key) {
@@ -119,36 +132,6 @@ var createTree(tree) {
     node.insertNode(n);
     return n;
     
-    // while (n.key !== key) {
-    //   if (key < n.key) {
-    //     if (n.left) {
-    //       if (n.left > key) {
-    //         var l = n.left;
-    //         node = createNode(n, {key:key,right:l});
-    //         node.right.parent = function() {return node;};
-    //         n.left = node;
-    //       } 
-    //       n = n.left;
-    //     } else {
-    //       n = createNode(n, {key:key});
-    //     }
-    //     n = node.left;
-    //   } else {
-    //     if (n.right) {
-    //       if (n.right < key){
-    //         var r = n.right;
-    //         node = createNode(n, {key:key,left:r});
-    //         node.left.parent = function () {return node;};
-    //         n.right = node;
-    //       }
-    //       n = node.right;
-    //     } else {
-    //       n = createNode(n, {key:key});
-    //     }
-    //   } 
-    // }
-    // n.values.push(value);
-    // return n
   }
   tree.find = tree.find || function (key) {
     if (!tree.root)  {return null;}
@@ -194,4 +177,8 @@ var createTree(tree) {
     
     return traverse(start, tree.root).range(end);
   }
+  return tree;
 }
+
+exports.createTree = createTree;
+exports.createNode = createNode;
